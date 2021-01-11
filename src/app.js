@@ -1,6 +1,7 @@
 const { createServer } = require('http');
 const { port } = require('./config');
 const app = require('./server');
+const { testConnection } = require('./db');
 
 const server = createServer(app);
 
@@ -45,6 +46,7 @@ function enableGracefulExit() {
 
 async function boot() {
   enableGracefulExit();
+  await testConnection();
   start();
 }
 
