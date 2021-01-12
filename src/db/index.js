@@ -9,6 +9,7 @@ async function testConnection() {
     console.log('DB connection done!');
   } catch (error) {
     console.log(`Test connection failed: ${error.message || error}`);
+    throw error;
   }
 }
 
