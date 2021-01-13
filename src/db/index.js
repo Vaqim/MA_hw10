@@ -68,7 +68,18 @@ class Database {
         `${insertItem} ON CONFLICT ON CONSTRAINT uniq_order_item DO ${updateQuantity}`,
       );
 
-      const orderList = await client('order_item').select('*').where('order_id', currentOrder.id);
+      const orderList = await client('order_item')
+        .select({
+          type: client.raw('(select name from types where id = products.type_id)'),
+          color: client.raw('(select name from colors where id = products.color_id)'),
+          price: 'products.price',
+          quantity: 'order_item.quantity',
+        })
+        .from('order_item')
+        .innerJoin('products', 'order_item.product_id', 'products.id')
+        .where('order_item.order_id', currentOrder.id);
+
+      console.log(orderList);
 
       return orderList;
     } catch (error) {
