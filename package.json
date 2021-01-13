@@ -4,7 +4,12 @@
   "description": "",
   "main": "src/app.js",
   "scripts": {
-    "start": "node src/app.js"
+    "start": "node src/app.js",
+    "db:migration:create": "./node_modules/.bin/knex --knexfile=./src/db/knexfile.js migrate:make",
+    "db:migration:up": "./node_modules/.bin/knex --knexfile=./src/db/knexfile.js migrate:up",
+    "db:migration:down": "./node_modules/.bin/knex --knexfile=./src/db/knexfile.js migrate:down",
+    "db:seed:make": "./node_modules/.bin/knex --knexfile=./src/db/knexfile.js seed:make",
+    "db:seed:run": "./node_modules/.bin/knex --knexfile=./src/db/knexfile.js seed:run"
   },
   "keywords": [],
   "author": "Vaqim",
@@ -12,7 +17,10 @@
   "dependencies": {
     "body-parser": "^1.19.0",
     "dotenv": "^8.2.0",
-    "express": "^4.17.1"
+    "express": "^4.17.1",
+    "express-async-handler": "^1.1.4",
+    "knex": "^0.21.15",
+    "pg": "^8.5.1"
   },
   "devDependencies": {
     "eslint": "^7.12.1",
@@ -20,6 +28,7 @@
     "eslint-config-prettier": "^6.14.0",
     "eslint-plugin-import": "^2.22.1",
     "eslint-plugin-prettier": "^3.1.4",
+    "nodemon": "^2.0.7",
     "prettier": "^2.1.2"
   }
 }

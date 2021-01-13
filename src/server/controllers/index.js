@@ -1,5 +1,5 @@
-// const controller = require('./controller');
+const Order = require('./orders');
 
-// module.exports = {
-//   controller,
-// };
+module.exports = {
+  Order,
+};
