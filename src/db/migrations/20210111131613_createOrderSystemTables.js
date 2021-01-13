@@ -38,7 +38,7 @@ exports.up = async (knex) => {
     table.uuid('color_id').notNullable().references('colors.id');
     table.uuid('type_id').notNullable().references('types.id');
     table.decimal('price').notNullable();
-    table.integer('quantity').notNullable().unsigned();
+    table.integer('quantity').notNullable().unsigned().defaultTo(0);
     table.timestamp('deleted_at').nullable();
     table.timestamps(true, true);
   });
@@ -56,18 +56,24 @@ exports.up = async (knex) => {
   `);
 
   const createStatusType = knex.schema.raw(
-    "CREATE TYPE status AS ENUM ('opened', 'done', 'closed')",
+    "CREATE TYPE status AS ENUM ('pending', 'confirmed', 'cancelled')",
   );
 
   await Promise.all([addConstraint, createTrigger, createStatusType]);
 
-  await knex.schema.createTable('orders', (table) => {
-    table.uuid('id').defaultTo(knex.raw('uuid_generate_v4()')).primary();
-    table.string('from').notNullable();
-    table.string('to').notNullable();
+  await knex.schema.createTable('users', (table) => {
+    table.integer('id').notNullable().primary();
+    table.string('name').notNullable().unique();
   });
 
-  await knex.schema.raw(`ALTER TABLE orders ADD COLUMN current_status STATUS DEFAULT 'opened'`);
+  await knex.schema.createTable('orders', (table) => {
+    table.uuid('id').defaultTo(knex.raw('uuid_generate_v4()')).primary();
+    table.integer('user_id').notNullable().unique().references('users.id');
+    table.string('from').nullable();
+    table.string('to').nullable();
+  });
+
+  await knex.schema.raw(`ALTER TABLE orders ADD COLUMN current_status STATUS DEFAULT 'pending'`);
 
   await knex.schema.createTable('order_item', (table) => {
     table.uuid('id').defaultTo(knex.raw('uuid_generate_v4()')).primary();
@@ -83,6 +89,8 @@ exports.up = async (knex) => {
 exports.down = async (knex) => {
   await knex.schema.dropTable('order_item');
   await knex.schema.dropTable('orders');
+
+  await knex.schema.dropTable('users');
 
   await knex.schema.raw('DROP TYPE IF EXISTS status');
 
