@@ -5,10 +5,10 @@ const { Order } = require('../controllers');
 const orders = Router();
 
 orders.post(
-  '/create',
+  '/addItem',
   asyncHandler(async (req, res) => {
     try {
-      await Order.createOrder(req, res);
+      await Order.addItemToOrder(req, res);
     } catch (error) {
       console.error(error.message);
       throw error;
@@ -26,6 +26,18 @@ orders.post(
       throw error;
     }
   }),
+
+  orders.post(
+    '/deliveryCost',
+    asyncHandler(async (req, res) => {
+      try {
+        await Order.getDeliveryCost(req, res);
+      } catch (error) {
+        console.error(error.message);
+        throw error;
+      }
+    }),
+  ),
 );
 
 module.exports = orders;

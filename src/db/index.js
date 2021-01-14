@@ -14,7 +14,7 @@ class Database {
     }
   }
 
-  static async createOrder(userId, product) {
+  static async addItemToOrder(userId, product) {
     try {
       if (!userId) throw new Error('user id wasn`t defined');
       if (!(product.color && product.type && product.price))
@@ -147,14 +147,28 @@ class Database {
           });
 
           await client('order_item').del().where('order_id', orderId);
-
           break;
 
         default:
           throw new Error('Unknown status');
       }
 
-      console.log('res: ', res, status);
+      return res;
+    } catch (error) {
+      console.error(`ERROR: ${error.message || error}`);
+      throw error;
+    }
+  }
+
+  static async getProductsFromOrder(orderId) {
+    try {
+      const res = await client('order_item')
+        .select({
+          price: 'products.price',
+          quantity: 'order_item.quantity',
+        })
+        .where('order_id', orderId)
+        .innerJoin('products', 'order_item.product_id', 'products.id');
       return res;
     } catch (error) {
       console.error(`ERROR: ${error.message || error}`);

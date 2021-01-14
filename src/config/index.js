@@ -17,6 +17,7 @@ const config = {
       max: 10,
     },
   },
+  apiKey: process.env.API_KEY || fatal('no API_KEY'),
 };
 
 module.exports = config;
