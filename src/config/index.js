@@ -18,6 +18,7 @@ const config = {
     },
   },
   apiKey: process.env.API_KEY || fatal('no API_KEY'),
+  apiOrigin: process.env.API_ORIGIN || fatal('no api origin'),
 };
 
 module.exports = config;

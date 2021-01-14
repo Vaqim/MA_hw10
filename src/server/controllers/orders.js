@@ -1,5 +1,5 @@
 const axios = require('axios');
-const { apiKey } = require('../../config');
+const { apiKey, apiOrigin } = require('../../config');
 const Database = require('../../db');
 
 class Order {
@@ -42,7 +42,7 @@ class Order {
       if (!(id && from && to)) throw new Error('Incorrect input data');
 
       const [fromRes, toRes] = await Promise.all([
-        axios.post('https://api.novaposhta.ua/v2.0/json/', {
+        axios.post(apiOrigin, {
           apiKey,
           modelName: 'Address',
           calledMethod: 'searchSettlements',
@@ -51,7 +51,7 @@ class Order {
             Limit: 1,
           },
         }),
-        axios.post('https://api.novaposhta.ua/v2.0/json/', {
+        axios.post(apiOrigin, {
           apiKey,
           modelName: 'Address',
           calledMethod: 'searchSettlements',
@@ -76,7 +76,7 @@ class Order {
         params.totalWeight += 10 * prod.quantity;
       });
 
-      const costRes = await axios.post('https://api.novaposhta.ua/v2.0/json/', {
+      const costRes = await axios.post(apiOrigin, {
         modelName: 'InternetDocument',
         calledMethod: 'getDocumentPrice',
         methodProperties: {
