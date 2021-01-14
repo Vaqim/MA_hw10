@@ -87,6 +87,80 @@ class Database {
       throw error;
     }
   }
+
+  static async switchStatus(orderId, status) {
+    try {
+      let res;
+      if (!(orderId && status)) throw new Error('Incorrect input data');
+
+      const [current] = await client('orders').select('current_status').where('id', orderId);
+      if (!current.current_status) throw new Error('Order wasn`t defined');
+
+      switch (status) {
+        case 'pending':
+          if (current.current_status === 'pending') throw new Error('Status is already "pending"');
+
+          res = await client('orders').update(
+            {
+              current_status: 'pending',
+            },
+            ['*'],
+          );
+
+          await client('order_item').del().where('order_id', orderId);
+          break;
+
+        case 'confirmed':
+          if (current.current_status === 'confirmed')
+            throw new Error('Status is already "confirmed"');
+          if (current.current_status === 'cancelled') throw new Error('Order is cancelled!');
+
+          res = await client('orders').update(
+            {
+              current_status: 'confirmed',
+            },
+            ['*'],
+          );
+          break;
+
+        case 'cancelled':
+          if (current.current_status === 'cancelled')
+            throw new Error('Status is already "cancelled"');
+          if (current.current_status === 'confirmed') throw new Error('Order is confirmed!');
+
+          res = await client('orders').update(
+            {
+              current_status: 'cancelled',
+            },
+            ['*'],
+          );
+
+          // eslint-disable-next-line no-case-declarations
+          const products = await client('order_item')
+            .select('product_id', 'quantity')
+            .where('order_id', orderId);
+
+          products.forEach(async (prod) => {
+            await client('products')
+              .increment('quantity', prod.quantity)
+              .where('id', prod.product_id);
+          });
+
+          await client('order_item').del().where('order_id', orderId);
+
+          break;
+
+        default:
+          throw new Error('Unknown status');
+      }
+
+      console.log('res: ', res, status);
+      return res;
+    } catch (error) {
+      console.error(`ERROR: ${error.message || error}`);
+      throw error;
+    }
+  }
 }
 
 module.exports = Database;

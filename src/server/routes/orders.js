@@ -10,7 +10,19 @@ orders.post(
     try {
       await Order.createOrder(req, res);
     } catch (error) {
-      console.error(error);
+      console.error(error.message);
+      throw error;
+    }
+  }),
+);
+
+orders.post(
+  '/switchStatus',
+  asyncHandler(async (req, res) => {
+    try {
+      await Order.switchStatus(req, res);
+    } catch (error) {
+      console.error(error.message);
       throw error;
     }
   }),
