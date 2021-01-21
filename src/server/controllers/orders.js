@@ -20,7 +20,7 @@ class Order {
 
       await Database.addProductToOrder(productInStock, productToOrder, currentOrderId);
 
-      const itemsList = await Database.getOrder(currentOrderId);
+      const itemsList = await Database.getOrderItems(currentOrderId);
 
       res.json(itemsList);
     } catch (error) {
@@ -33,8 +33,34 @@ class Order {
   static async switchStatus(req, res) {
     try {
       const { id, status } = req.body;
-      const response = await Database.switchStatus(id, status);
-      res.json(response);
+
+      if (!(id && status)) throw new Error('Incorrect input data :(');
+
+      const currentStatus = await Database.getOrderStatus(id);
+      let order;
+
+      if (currentStatus === status) throw new Error(`Status is already ${status}`);
+
+      switch (status) {
+        case 'pending':
+          [order] = await Promise.all([Database.switchStatus(id, status), Database.cleanOrder(id)]);
+          break;
+        case 'confirmed':
+          if (currentStatus === 'cancelled') throw new Error('Order is cancelled!');
+          order = await Database.switchStatus(id, status);
+          break;
+        case 'cancelled':
+          if (currentStatus === 'confirmed') throw new Error('Order is confirmed!');
+          [order] = await Promise.all([
+            Database.switchStatus(id, status),
+            Database.returnProductsToStock(id),
+          ]);
+          break;
+        default:
+          throw new Error('Unknown status');
+      }
+
+      res.json(order);
     } catch (error) {
       console.log(error);
       res.json({ error: error.message }).status(400);

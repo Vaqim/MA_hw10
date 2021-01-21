@@ -14,6 +14,8 @@ class Database {
     }
   }
 
+  // /order/addItem
+
   static async getOrCreateOrder(userId) {
     try {
       if (!userId) throw new Error('ERROR: argument "userId : uuid" wasn`t defined!');
@@ -92,7 +94,7 @@ class Database {
     }
   }
 
-  static async getOrder(orderId) {
+  static async getOrderItems(orderId) {
     try {
       const itemsList = await client('order_item')
         .select({
@@ -112,95 +114,64 @@ class Database {
     }
   }
 
-  // static async addItemToOrder(userId, product) {
-  //   try {
-  //     // currentOrderId = await this.getOrCreateOrder(userId);
+  // /order/switchStatus
 
-  //     product.quantity = product.quantity || 1;
-  //     // productInStock = await this.getProductParams(product);
-
-  //     // await addProductToOrder()
-
-  //     // const orderList = await this.getOrder();
-
-  //     return orderList;
-  //   } catch (error) {
-  //     console.error(`ERROR: ${error.message || error}`);
-  //     throw error;
-  //   }
-  // }
-
-  static async switchStatus(orderId, status) {
+  static async getOrderStatus(id) {
     try {
-      let res;
-      if (!(orderId && status)) throw new Error('Incorrect input data');
+      const [{ status }] = await client('orders').select('status').where('id', id);
 
-      const [current] = await client('orders').select('current_status').where('id', orderId);
-      if (!current.current_status) throw new Error('Order wasn`t defined');
-
-      switch (status) {
-        case 'pending':
-          if (current.current_status === 'pending') throw new Error('Status is already "pending"');
-
-          res = await client('orders').update(
-            {
-              current_status: 'pending',
-            },
-            ['*'],
-          );
-
-          await client('order_item').del().where('order_id', orderId);
-          break;
-
-        case 'confirmed':
-          if (current.current_status === 'confirmed')
-            throw new Error('Status is already "confirmed"');
-          if (current.current_status === 'cancelled') throw new Error('Order is cancelled!');
-
-          res = await client('orders').update(
-            {
-              current_status: 'confirmed',
-            },
-            ['*'],
-          );
-          break;
-
-        case 'cancelled':
-          if (current.current_status === 'cancelled')
-            throw new Error('Status is already "cancelled"');
-          if (current.current_status === 'confirmed') throw new Error('Order is confirmed!');
-
-          res = await client('orders').update(
-            {
-              current_status: 'cancelled',
-            },
-            ['*'],
-          );
-
-          // eslint-disable-next-line no-case-declarations
-          const products = await client('order_item')
-            .select('product_id', 'quantity')
-            .where('order_id', orderId);
-
-          products.forEach(async (prod) => {
-            await client('products')
-              .increment('quantity', prod.quantity)
-              .where('id', prod.product_id);
-          });
-
-          await client('order_item').del().where('order_id', orderId);
-          break;
-
-        default:
-          throw new Error('Unknown status');
-      }
-
-      return res;
+      return status;
     } catch (error) {
-      console.error(`ERROR: ${error.message || error}`);
+      console.error(error.message);
       throw error;
     }
   }
+
+  static async switchStatus(orderId, status) {
+    try {
+      const newOrder = await client('orders')
+        .update(
+          {
+            status,
+          },
+          ['*'],
+        )
+        .where('id', orderId);
+
+      return newOrder;
+    } catch (error) {
+      console.error(error.message);
+      throw error;
+    }
+  }
+
+  static async cleanOrder(orderId) {
+    try {
+      await client('order_item').del().where('order_id', orderId);
+    } catch (error) {
+      console.error(error.message);
+      throw error;
+    }
+  }
+
+  static async returnProductsToStock(orderId) {
+    try {
+      const products = await client('order_item')
+        .select('product_id', 'quantity')
+        .where('order_id', orderId);
+
+      products.forEach(async (prod) => {
+        await client('products').increment('quantity', prod.quantity).where('id', prod.product_id);
+      });
+
+      await this.cleanOrder(orderId);
+    } catch (error) {
+      console.error(error.message);
+      throw error;
+    }
+  }
+
+  // /order/deliveryCost
 
   static async getProductsFromOrder(orderId) {
     try {
