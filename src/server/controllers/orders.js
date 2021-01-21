@@ -5,17 +5,24 @@ const Database = require('../../db');
 class Order {
   static async addItemToOrder(req, res) {
     try {
-      const { user_id, product } = req.body;
+      const { user_id: userId, product: productToOrder } = req.body;
+      productToOrder.quantity = productToOrder.quantity || 1;
 
-      if (!(user_id && product)) {
+      if (!(userId && productToOrder.price, productToOrder.type, productToOrder.color)) {
         res.json({ error: 'Incorret data' }).status(400);
         throw new Error('Invalid input data');
       }
 
-      const response = await Database.addItemToOrder(user_id, product);
-      res.json(response);
+      const [currentOrderId, productInStock] = await Promise.all([
+        Database.getOrCreateOrder(userId),
+        Database.getProductParams(productToOrder),
+      ]);
 
-      return true;
+      await Database.addProductToOrder(productInStock, productToOrder, currentOrderId);
+
+      const itemsList = await Database.getOrder(currentOrderId);
+
+      res.json(itemsList);
     } catch (error) {
       console.error(error);
       res.json({ error: error.message }).status(400);

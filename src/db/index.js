@@ -14,61 +14,87 @@ class Database {
     }
   }
 
-  static async addItemToOrder(userId, product) {
+  static async getOrCreateOrder(userId) {
     try {
-      if (!userId) throw new Error('user id wasn`t defined');
-      if (!(product.color && product.type && product.price))
-        throw new Error('incorrect input data');
+      if (!userId) throw new Error('ERROR: argument "userId : uuid" wasn`t defined!');
 
-      let [currentOrder] = await client('orders').select('*').where('user_id', userId);
-
-      if (!currentOrder) {
-        [currentOrder] = await client('orders')
-          .insert({
+      const [currentOrderId] = await client('orders')
+        .insert(
+          {
             user_id: userId,
-          })
-          .returning('*');
-      }
+          },
+          'id',
+        )
+        .onConflict('user_id')
+        .merge();
+
+      return currentOrderId;
+    } catch (error) {
+      console.log(error.message);
+      throw error;
+    }
+  }
+
+  static async getProductParams({ color, type, price }) {
+    try {
+      if (!(color && type && price))
+        throw new Error('ERROR: arguments "color, type, price" required!');
 
       const getPropId = (prop, value) => client(`${prop}s`).select('id').where('name', value);
 
-      product.quantity = product.quantity || 1;
-
       const [productInStock] = await client('products')
-        .select('*')
+        .select(['id', 'quantity'])
         .where({
-          type_id: getPropId('type', product.type),
-          color_id: getPropId('color', product.color),
-          price: product.price,
-        });
+          type_id: getPropId('type', type),
+          color_id: getPropId('color', color),
+          price,
+        })
+        .whereNull('deleted_at');
 
       if (!productInStock) throw new Error('Product wasn`t defined');
-      if (product.quantity > productInStock.quantity)
+
+      return productInStock;
+    } catch (error) {
+      console.log(error.message);
+      throw error;
+    }
+  }
+
+  static async addProductToOrder(productInStock, productToOrder, orderId) {
+    try {
+      if (productToOrder.quantity > productInStock.quantity)
         throw new Error(
-          `There isn\`t so much goods in stock, ${productInStock.quantity} available`,
+          `There isn\`t so many goods in stock, ${productInStock.quantity} available`,
         );
 
       await client('products')
         .decrement({
-          quantity: product.quantity,
+          quantity: productToOrder.quantity,
         })
         .where('id', productInStock.id);
 
       const insertItem = client('order_item').insert({
-        order_id: currentOrder.id,
+        order_id: orderId,
         product_id: productInStock.id,
-        quantity: product.quantity,
+        quantity: productToOrder.quantity,
       });
 
       const updateQuantity = client.queryBuilder().update({
-        quantity: client.raw('order_item.quantity + ?', [product.quantity]),
+        quantity: client.raw('order_item.quantity + ?', [productToOrder.quantity]),
       });
 
       await client.raw(
         `${insertItem} ON CONFLICT ON CONSTRAINT uniq_order_item DO ${updateQuantity}`,
       );
+    } catch (error) {
+      console.error(error.message);
+      throw error;
+    }
+  }
 
-      const orderList = await client('order_item')
+  static async getOrder(orderId) {
+    try {
+      const itemsList = await client('order_item')
         .select({
           type: client.raw('(select name from types where id = products.type_id)'),
           color: client.raw('(select name from colors where id = products.color_id)'),
@@ -77,16 +103,32 @@ class Database {
         })
         .from('order_item')
         .innerJoin('products', 'order_item.product_id', 'products.id')
-        .where('order_item.order_id', currentOrder.id);
+        .where('order_item.order_id', orderId);
 
-      console.log(orderList);
-
-      return orderList;
+      return itemsList;
     } catch (error) {
-      console.error(`ERROR: ${error.message || error}`);
+      console.error(error.message);
       throw error;
     }
   }
+
+  // static async addItemToOrder(userId, product) {
+  //   try {
+  //     // currentOrderId = await this.getOrCreateOrder(userId);
+
+  //     product.quantity = product.quantity || 1;
+  //     // productInStock = await this.getProductParams(product);
+
+  //     // await addProductToOrder()
+
+  //     // const orderList = await this.getOrder();
+
+  //     return orderList;
+  //   } catch (error) {
+  //     console.error(`ERROR: ${error.message || error}`);
+  //     throw error;
+  //   }
+  // }
 
   static async switchStatus(orderId, status) {
     try {
