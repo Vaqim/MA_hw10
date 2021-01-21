@@ -8,7 +8,7 @@ class Order {
       const { user_id: userId, product: productToOrder } = req.body;
       productToOrder.quantity = productToOrder.quantity || 1;
 
-      if (!(userId && productToOrder.price, productToOrder.type, productToOrder.color)) {
+      if (!(userId && productToOrder.price && productToOrder.type && productToOrder.color)) {
         res.json({ error: 'Incorret data' }).status(400);
         throw new Error('Invalid input data');
       }
