@@ -3,7 +3,7 @@ exports.up = async (knex) => {
 
   await Promise.all([
     knex.schema.raw(`
-      CREATE OR REPLACE FUNCTION updated_at_timastamp() RETURNS TRIGGER
+      CREATE OR REPLACE FUNCTION updated_at_timestamp() RETURNS TRIGGER
         LANGUAGE plpgsql
         AS
         $$
@@ -37,11 +37,11 @@ exports.up = async (knex) => {
 
   await Promise.all([
     knex.schema.raw(`
-      CREATE TRIGGER updated_at_timastamp
+      CREATE TRIGGER updated_at_timestamp
       BEFORE UPDATE
       ON products
       FOR EACH ROW
-      EXECUTE PROCEDURE updated_at_timastamp();
+      EXECUTE PROCEDURE updated_at_timestamp();
     `),
     knex.schema.createTable('users', (table) => {
       table.integer('id').notNullable().primary();
@@ -81,7 +81,7 @@ exports.down = async (knex) => {
   ]);
 
   await Promise.all([
-    knex.raw('DROP FUNCTION IF EXISTS updated_at_timastamp()'),
+    knex.raw('DROP FUNCTION IF EXISTS updated_at_timestamp()'),
     knex.schema.dropTable('colors'),
     knex.schema.dropTable('types'),
     knex.raw('DROP TYPE IF EXISTS order_status'),
