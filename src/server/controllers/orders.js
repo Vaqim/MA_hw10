@@ -43,6 +43,7 @@ class Order {
 
       switch (status) {
         case 'pending':
+          await Database.cleanRoute(id);
           [[order]] = await Promise.all([
             Database.switchStatus(id, status),
             Database.cleanOrder(id),
@@ -103,7 +104,9 @@ class Order {
       const fromId = fromRes.data.data[0].Addresses[0].Ref;
       const toId = toRes.data.data[0].Addresses[0].Ref;
 
-      const [products] = await Database.getProductsFromOrder(id);
+      const [totalParams] = await Database.getOrderTotalParams(id);
+      if (!(totalParams.totalPrice && totalParams.totalWeight)) throw new Error('Order is empty!');
+      await Database.saveRoute(id, from, to);
 
       const costRes = await axios.post(apiOrigin, {
         modelName: 'InternetDocument',
@@ -111,9 +114,9 @@ class Order {
         methodProperties: {
           CitySender: fromId,
           CityRecipient: toId,
-          Weight: +products.totalWeight,
+          Weight: +totalParams.totalWeight,
           ServiceType: 'DoorsDoors',
-          Cost: +products.totalPrice,
+          Cost: +totalParams.totalPrice,
           CargoType: 'Cargo',
           SeatsAmount: 1,
         },

@@ -176,7 +176,7 @@ class Database {
 
   // /order/deliveryCost
 
-  static async getProductsFromOrder(orderId) {
+  static async getOrderTotalParams(orderId) {
     try {
       const res = await client('order_item')
         .select({
@@ -188,6 +188,34 @@ class Database {
       return res;
     } catch (error) {
       console.error(`ERROR: ${error.message || error}`);
+      throw error;
+    }
+  }
+
+  static async saveRoute(id, from, to) {
+    try {
+      await client('orders')
+        .update({
+          from,
+          to,
+        })
+        .where({ id });
+    } catch (error) {
+      console.error(error.message);
+      throw error;
+    }
+  }
+
+  static async cleanRoute(id) {
+    try {
+      await client('orders')
+        .update({
+          from: null,
+          to: null,
+        })
+        .where({ id });
+    } catch (error) {
+      console.error(error.message);
       throw error;
     }
   }
