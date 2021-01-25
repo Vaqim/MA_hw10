@@ -20,7 +20,7 @@ class Order {
 
       await Database.addProductToOrder(productInStock, productToOrder, currentOrderId);
 
-      const itemsList = await Database.getOrderItems(currentOrderId);
+      const [itemsList] = await Database.getOrderItems(currentOrderId);
 
       res.json(itemsList);
     } catch (error) {
@@ -43,15 +43,18 @@ class Order {
 
       switch (status) {
         case 'pending':
-          [order] = await Promise.all([Database.switchStatus(id, status), Database.cleanOrder(id)]);
+          [[order]] = await Promise.all([
+            Database.switchStatus(id, status),
+            Database.cleanOrder(id),
+          ]);
           break;
         case 'confirmed':
           if (currentStatus === 'cancelled') throw new Error('Order is cancelled!');
-          order = await Database.switchStatus(id, status);
+          [order] = await Database.switchStatus(id, status);
           break;
         case 'cancelled':
           if (currentStatus === 'confirmed') throw new Error('Order is confirmed!');
-          [order] = await Promise.all([
+          [[order]] = await Promise.all([
             Database.switchStatus(id, status),
             Database.returnProductsToStock(id),
           ]);
