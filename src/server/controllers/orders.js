@@ -20,7 +20,7 @@ class Order {
 
       await Database.addProductToOrder(productInStock, productToOrder, currentOrderId);
 
-      const [itemsList] = await Database.getOrderItems(currentOrderId);
+      const itemsList = await Database.getOrderItems(currentOrderId);
 
       res.json(itemsList);
     } catch (error) {
@@ -103,14 +103,7 @@ class Order {
       const fromId = fromRes.data.data[0].Addresses[0].Ref;
       const toId = toRes.data.data[0].Addresses[0].Ref;
 
-      const products = await Database.getProductsFromOrder(id);
-
-      const params = { totalPrice: 0, totalWeight: 0 };
-
-      products.forEach((prod) => {
-        params.totalPrice += +prod.price * prod.quantity;
-        params.totalWeight += 10 * prod.quantity;
-      });
+      const [products] = await Database.getProductsFromOrder(id);
 
       const costRes = await axios.post(apiOrigin, {
         modelName: 'InternetDocument',
@@ -118,9 +111,9 @@ class Order {
         methodProperties: {
           CitySender: fromId,
           CityRecipient: toId,
-          Weight: params.totalWeight,
+          Weight: +products.totalWeight,
           ServiceType: 'DoorsDoors',
-          Cost: params.totalPrice,
+          Cost: +products.totalPrice,
           CargoType: 'Cargo',
           SeatsAmount: 1,
         },

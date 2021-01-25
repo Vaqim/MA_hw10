@@ -180,8 +180,8 @@ class Database {
     try {
       const res = await client('order_item')
         .select({
-          price: 'products.price',
-          quantity: 'order_item.quantity',
+          totalPrice: client.raw('SUM(products.price * order_item.quantity)'),
+          totalWeight: client.raw('SUM(products.weight * order_item.quantity)'),
         })
         .where('order_id', orderId)
         .innerJoin('products', 'order_item.product_id', 'products.id');
