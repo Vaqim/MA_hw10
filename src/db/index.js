@@ -68,26 +68,27 @@ class Database {
         throw new Error(
           `There isn\`t so many goods in stock, ${productInStock.quantity} available`,
         );
+      await client.transaction(async (trx) => {
+        await trx('products')
+          .decrement({
+            quantity: productToOrder.quantity,
+          })
+          .where('id', productInStock.id);
 
-      await client('products')
-        .decrement({
+        const insertItem = trx('order_item').insert({
+          order_id: orderId,
+          product_id: productInStock.id,
           quantity: productToOrder.quantity,
-        })
-        .where('id', productInStock.id);
+        });
 
-      const insertItem = client('order_item').insert({
-        order_id: orderId,
-        product_id: productInStock.id,
-        quantity: productToOrder.quantity,
+        const updateQuantity = trx.queryBuilder().update({
+          quantity: trx.raw('order_item.quantity + ?', [productToOrder.quantity]),
+        });
+
+        await trx.raw(
+          `${insertItem} ON CONFLICT ON CONSTRAINT uniq_order_item DO ${updateQuantity}`,
+        );
       });
-
-      const updateQuantity = client.queryBuilder().update({
-        quantity: client.raw('order_item.quantity + ?', [productToOrder.quantity]),
-      });
-
-      await client.raw(
-        `${insertItem} ON CONFLICT ON CONSTRAINT uniq_order_item DO ${updateQuantity}`,
-      );
     } catch (error) {
       console.error(error.message);
       throw error;
@@ -156,15 +157,17 @@ class Database {
 
   static async returnProductsToStock(orderId) {
     try {
-      const products = await client('order_item')
-        .select('product_id', 'quantity')
-        .where('order_id', orderId);
+      await client.transaction(async (trx) => {
+        const products = await trx('order_item')
+          .select('product_id', 'quantity')
+          .where('order_id', orderId);
 
-      products.forEach(async (prod) => {
-        await client('products').increment('quantity', prod.quantity).where('id', prod.product_id);
+        products.forEach(async (prod) => {
+          await trx('products').increment('quantity', prod.quantity).where('id', prod.product_id);
+        });
+
+        await this.cleanOrder(orderId);
       });
-
-      await this.cleanOrder(orderId);
     } catch (error) {
       console.error(error.message);
       throw error;
