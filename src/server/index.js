@@ -1,7 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 
-// const routes = require('./routes');
+const routes = require('./routes');
 const middlewares = require('./middlewares');
 
 const app = express();
@@ -13,7 +13,7 @@ app.get('/', (req, res) => {
   res.send('Hello from home page!');
 });
 
-// app.use('/order', routes.order);
+app.use('/order', routes.order);
 
 app.use(middlewares.errorHandler);
 

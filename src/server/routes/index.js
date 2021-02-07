@@ -1,5 +1,5 @@
-// const router = require('./router');
+const order = require('./orders');
 
-// module.exports = {
-//   router,
-// };
+module.exports = {
+  order,
+};
